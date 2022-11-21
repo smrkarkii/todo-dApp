@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Todo from "./Todo";
 import "./App.css";
+import "./Todo.jsx";
 
 import { TodoContractAddress } from "./config.js";
 import { ethers } from "ethers";
@@ -39,7 +40,7 @@ function App() {
 
   const addTodo = async () => {
     let todo = {
-      todotext: input,
+      todoText: input,
     };
 
     try {
@@ -52,7 +53,7 @@ function App() {
           TodoAbi.abi,
           signer
         );
-        TodoContract.addTask(todo.todotext)
+        TodoContract.addTask(todo.todoText)
           .then((response) => {
             setTodo([...todo, todo]);
           })
@@ -66,9 +67,48 @@ function App() {
 
     setInput("");
   };
-  const deleteTodo = async () => {};
+  const deleteTodo = (key) => async () => {
+    try {
+      const { ethereum } = window;
+      if (ethereum) {
+        const provider = new ethers.providers.Web3Provider(ethereum);
+        const signer = provider.getSigner();
+        const TodoContract = new ethers.Contract(
+          TodoContractAddress,
+          TodoAbi.abi,
+          signer
+        );
+        let deletetx = await TodoContract.deleteTask(key);
+        let allTasks = await TodoContract.getTasks();
+        setTodo(allTasks);
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  };
+  const getTodos = async () => {
+    try {
+      const { ethereum } = window;
+      if (ethereum) {
+        const provider = new ethers.providers.Web3Provider(ethereum);
+        const signer = provider.getSigner();
+        const TodoContract = new ethers.Contract(
+          TodoContractAddress,
+          TodoAbi.abi,
+          signer
+        );
+        let allTasks = await TodoContract.getTasks();
+        setTodo(allTasks);
+      } else {
+        alert("no metamask");
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
   useEffect(() => {
-    connectWallet();
+    getTodos();
   }, []);
   return (
     <div>
@@ -76,12 +116,25 @@ function App() {
       <div className="connectDiv">
         <button onClick={connectWallet}>Connect Wallet</button>
       </div>
-      <input className="inputPlace" placeholder="Write your todos" />
+      <input
+        onChange={(e) => setInput(e.target.value)}
+        className="inputPlace"
+        placeholder="Write your todos"
+      />
       <button className="addButton" onClick={addTodo}>
         Add Todo
       </button>
       <div className="todoList">
         <h4>Todos</h4>
+        <ul>
+          {todo.map((item) => (
+            <Todo
+              key={item.id}
+              taskText={item.taskText}
+              onClick={deleteTodo(item.id)}
+            />
+          ))}
+        </ul>
       </div>
     </div>
   );
